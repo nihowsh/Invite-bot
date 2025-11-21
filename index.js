@@ -5,8 +5,25 @@ const dayjs = require("dayjs");
 // === Lowdb Setup ===
 const { Low } = require("lowdb");
 const { JSONFile } = require("lowdb/node");
+
 const adapter = new JSONFile("database.json");
-const db = new Low(adapter);
+
+// Default DB data (REQUIRED for Render)
+const defaultData = {
+    invites: {},
+    rolesettings: {},
+    logchannels: {}
+};
+
+// Pass defaultData so lowdb doesn't crash on empty file
+const db = new Low(adapter, defaultData);
+
+// Load DB
+async function initDB() {
+    await db.read();
+    await db.write(); // ensures file exists with defaults
+}
+initDB();
 
 // Load DB
 async function initDB() {
