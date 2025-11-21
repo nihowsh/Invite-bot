@@ -1,7 +1,7 @@
 {
   "name": "invite-bot",
   "version": "1.0.0",
-  "description": "Invite tracking bot with role assigning",
+  "description": "Discord Invite Tracking Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -13,7 +13,10 @@
     "discord.js": "^14.14.1",
     "dayjs": "^1.11.10",
     "dotenv": "^16.4.5",
-    "lowdb": "^6.0.1"
+    "lowdb": "^6.0.1",
+    "express": "^4.19.2"
   }
 }
+
+
 
