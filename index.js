@@ -1,10 +1,10 @@
 require("dotenv").config();
 const { Client, GatewayIntentBits, Partials } = require("discord.js");
-const { QuickDB } = require("quick.db");
+const { QuickDB } = require("quick.db2"); // ✅ FIXED for Render
 const dayjs = require("dayjs");
 const db = new QuickDB();
 
-// Create client
+// Discord client
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -14,92 +14,82 @@ const client = new Client({
     partials: [Partials.GuildMember]
 });
 
-// Cache invites so we can compare
 let invitesCache = new Map();
 
 client.on("ready", async () => {
     console.log(`🔥 Logged in as ${client.user.tag}`);
 
-    // Preload invites for all guilds
-    client.guilds.cache.forEach(async guild => {
-        const invites = await guild.invites.fetch().catch(() => {});
+    // Cache invites
+    for (const guild of client.guilds.cache.values()) {
+        const invites = await guild.invites.fetch().catch(() => null);
         if (invites) invitesCache.set(guild.id, invites);
-    });
+    }
 
     registerCommands();
 });
 
 client.on("guildMemberAdd", async (member) => {
-
     const oldInvites = invitesCache.get(member.guild.id);
-    const newInvites = await member.guild.invites.fetch().catch(() => {});
+    const newInvites = await member.guild.invites.fetch().catch(() => null);
+
     if (!oldInvites || !newInvites) return;
 
-    // Find which invite was used
-    const usedInvite = newInvites.find(i => i.uses > oldInvites.get(i.code)?.uses);
-
+    const usedInvite = newInvites.find(i => i.uses > (oldInvites.get(i.code)?.uses || 0));
     invitesCache.set(member.guild.id, newInvites);
     if (!usedInvite) return;
 
     const inviter = member.guild.members.cache.get(usedInvite.inviter.id);
     if (!inviter) return;
 
-    // CHECK ACCOUNT AGE (Fake-invite prevention)
-    const accountAgeDays = dayjs().diff(dayjs(member.user.createdAt), "day");
-    const isFake = accountAgeDays <= 3;
+    // Check for fake invites — account age <= 3 days
+    const accountAge = dayjs().diff(dayjs(member.user.createdAt), "day");
+    const fake = accountAge <= 3;
 
-    // Logging function
     log(member.guild, 
-        `👤 User joined: ${member.user.tag}\nInvited by: ${inviter.user.tag}\nAccount Age: ${accountAgeDays} days\n${isFake ? "❌ Invite ignored" : "✔ Invite counted"}`
+        `👤 User joined: ${member.user.tag}\nInvited by: ${inviter.user.tag}\nAccount Age: ${accountAge} days\n${fake ? "❌ Invite ignored" : "✔ Invite counted"}`
     );
 
-    if (isFake) return;
+    if (fake) return;
 
-    // VALID INVITE → ADD COUNT
-    let userInvites = (await db.get(`invites_${inviter.id}_${member.guild.id}`)) || 0;
-    userInvites++;
-    await db.set(`invites_${inviter.id}_${member.guild.id}`, userInvites);
+    // Add invite count
+    let invKey = `invites_${inviter.id}_${member.guild.id}`;
+    let invites = (await db.get(invKey)) || 0;
+    invites++;
+    await db.set(invKey, invites);
 
-    // CHECK ROLE THRESHOLDS
+    // Check role thresholds
     const settings = (await db.get(`rolesettings_${member.guild.id}`)) || {};
 
     for (const roleId in settings) {
-        const required = settings[roleId];
+        const needed = settings[roleId];
         const role = member.guild.roles.cache.get(roleId);
         if (!role) continue;
 
-        // ADD ROLE IF REACHED
-        if (userInvites >= required && !inviter.roles.cache.has(roleId)) {
+        if (invites >= needed && !inviter.roles.cache.has(roleId)) {
             inviter.roles.add(roleId).catch(() => {});
         }
 
-        // REMOVE ROLE IF DROPPED
-        if (userInvites < required && inviter.roles.cache.has(roleId)) {
+        if (invites < needed && inviter.roles.cache.has(roleId)) {
             inviter.roles.remove(roleId).catch(() => {});
         }
     }
-
 });
 
-// Handle slash commands
+// Slash command handler
 client.on("interactionCreate", async (interaction) => {
-
     if (!interaction.isChatInputCommand()) return;
 
-    // SET INVITE ROLE THRESHOLD
     if (interaction.commandName === "setinviterole") {
         const role = interaction.options.getRole("role");
         const invites = interaction.options.getInteger("invites");
 
         let settings = (await db.get(`rolesettings_${interaction.guild.id}`)) || {};
         settings[role.id] = invites;
-
         await db.set(`rolesettings_${interaction.guild.id}`, settings);
 
         return interaction.reply(`✅ **${role.name}** now requires **${invites} invites.**`);
     }
 
-    // LIST ROLES + INVITE VALUES
     if (interaction.commandName === "inviteroles") {
         const settings = (await db.get(`rolesettings_${interaction.guild.id}`)) || {};
 
@@ -115,25 +105,23 @@ client.on("interactionCreate", async (interaction) => {
         return interaction.reply(text);
     }
 
-    // SET LOGGING CHANNEL
     if (interaction.commandName === "setlogchannel") {
         const channel = interaction.options.getChannel("channel");
-
         await db.set(`logchannel_${interaction.guild.id}`, channel.id);
 
         return interaction.reply(`📝 Logging channel set to ${channel}`);
     }
 });
 
-// Simple logging helper
-async function log(guild, message) {
+// Logging helper
+async function log(guild, msg) {
     const channelId = await db.get(`logchannel_${guild.id}`);
     if (!channelId) return;
 
     const channel = guild.channels.cache.get(channelId);
     if (!channel) return;
 
-    channel.send(message).catch(() => {});
+    channel.send(msg).catch(() => {});
 }
 
 // Register slash commands
@@ -153,9 +141,9 @@ async function registerCommands() {
         },
         {
             name: "setlogchannel",
-            description: "Set the logging channel",
+            description: "Set logging channel",
             options: [
-                { name: "channel", type: 7, description: "Select a channel", required: true }
+                { name: "channel", type: 7, description: "Select channel", required: true }
             ]
         }
     ];
@@ -163,5 +151,4 @@ async function registerCommands() {
     client.application.commands.set(commands);
 }
 
-// Login bot
 client.login(process.env.BOT_TOKEN);
