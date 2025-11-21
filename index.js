@@ -189,3 +189,15 @@ async function registerCommands() {
 
 client.login(process.env.BOT_TOKEN);
 
+// -- Add this at the end of your index.js --
+const express = require("express");
+const app = express();
+
+app.get("/", (req, res) => res.send("Invite-bot running"));
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`HTTP server listening on port ${PORT}`);
+});
+
+
