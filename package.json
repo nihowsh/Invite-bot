@@ -1,0 +1,14 @@
+{
+  "name": "invite-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.0.0",
+    "quick.db": "^9.0.0",
+    "dayjs": "^1.11.10",
+    "dotenv": "^16.0.0"
+  }
+}
