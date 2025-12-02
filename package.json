@@ -1,20 +1,15 @@
 {
-  "name": "invite-bot",
+  "name": "invite-role-bot",
   "version": "1.0.0",
-  "description": "Discord Invite Tracking Bot",
+  "description": "Discord invite role bot with persistence and log recovery",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
-  "engines": {
-    "node": ">=18"
-  },
   "dependencies": {
     "discord.js": "^14.14.1",
-    "dayjs": "^1.11.10",
-    "dotenv": "^16.4.5",
-    "lowdb": "^6.0.1",
-    "express": "^4.19.2"
+    "dotenv": "^16.4.5"
   }
 }
 
