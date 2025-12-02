@@ -1,7 +1,7 @@
 {
   "name": "invite-role-bot",
   "version": "1.0.0",
-  "description": "Discord invite role bot with persistence and log recovery",
+  "description": "Discord invite role bot with persistence, log recovery, and health endpoint for Render/UptimeRobot",
   "main": "index.js",
   "type": "module",
   "scripts": {
